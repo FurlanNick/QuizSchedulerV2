@@ -93,6 +93,10 @@ class LockMeetRequest(BaseModel):
     session_id: str
     meet_number: int
 
+class ImportRequest(BaseModel):
+    session_id: str
+    state: ProgramState
+
 class MatchupsRequest(BaseModel):
     n_teams: int
     n_matches_per_team: int
