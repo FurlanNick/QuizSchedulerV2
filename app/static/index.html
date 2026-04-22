@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuizMeet Scheduler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ═══ SIGN-IN ═══════════════════════════════════════════════════════════════ -->
+<div id="view-signin" class="view active">
+  <div class="signin-wrap">
+    <div class="brand">
+      <div class="brand-icon">⬡</div>
+      <h1>QuizMeet<br><em>Scheduler</em></h1>
+      <p class="brand-sub">Multi-meet quiz scheduling with roster management</p>
+    </div>
+    <div class="signin-card">
+      <label class="field-label">Your name or program name</label>
+      <input id="signin-name" type="text" class="field-input" placeholder="e.g. Westside Bible Quiz" />
+      <button class="btn-primary" onclick="doSignIn()">Continue →</button>
+      <p class="signin-note">Returning? Use the same name to resume your season.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP SHELL (after sign-in) ════════════════════════════════════════════ -->
+<div id="view-app" class="view">
+
+  <!-- Sidebar nav -->
+  <nav id="sidebar">
+    <div class="sidebar-top">
+      <div class="nav-brand">⬡ QuizMeet</div>
+      <div id="nav-user" class="nav-user"></div>
+    </div>
+    <ul class="nav-list">
+      <li class="nav-item active" data-tab="setup"    onclick="switchTab('setup')">
+        <span class="nav-icon">⚙</span> Setup
+      </li>
+      <li class="nav-item" data-tab="roster"   onclick="switchTab('roster')">
+        <span class="nav-icon">👥</span> Teams
+      </li>
+      <li class="nav-item" data-tab="schedule" onclick="switchTab('schedule')">
+        <span class="nav-icon">📅</span> Schedule
+      </li>
+      <li class="nav-item" data-tab="cross"    onclick="switchTab('cross')">
+        <span class="nav-icon">🔀</span> Cross-Ref
+      </li>
+    </ul>
+    <div class="sidebar-foot">
+      <button class="btn-ghost small" onclick="doSignOut()">Sign out</button>
+    </div>
+  </nav>
+
+  <!-- Main content area -->
+  <main id="main-content">
+
+    <!-- ── SETUP TAB ─────────────────────────────────────────────────────── -->
+    <section id="tab-setup" class="tab-section active">
+      <div class="page-header">
+        <h2>Program Setup</h2>
+        <p>Define the structure of your quiz season.</p>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>Season Structure</h3>
+          <div class="field-row">
+            <label class="field-label">Quiz Meets</label>
+            <input type="number" id="cfg-meets" class="field-input sm" min="1" max="20" value="4" />
+            <span class="field-hint">How many meets this season?</span>
+          </div>
+          <div class="field-row">
+            <label class="field-label">Rooms</label>
+            <input type="number" id="cfg-rooms" class="field-input sm" min="1" max="20" value="5" />
+            <span class="field-hint">Simultaneous quiz rooms per time slot.</span>
+          </div>
+          <div class="field-row">
+            <label class="field-label">Time Slots</label>
+            <input type="number" id="cfg-slots" class="field-input sm" min="1" max="20" value="6" />
+            <span class="field-hint">Time slots per meet (used as scheduling buffer).</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Matchup Rules</h3>
+          <div class="field-row">
+            <label class="field-label">Matches per Team</label>
+            <input type="number" id="cfg-mpt" class="field-input sm" min="1" max="20" value="3" />
+            <span class="field-hint">Rounds each team competes per meet.</span>
+          </div>
+          <div class="field-row">
+            <label class="field-label">Tournament Type</label>
+            <select id="cfg-type" class="field-input sm">
+              <option value="international">International</option>
+              <option value="district" selected>District</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-primary" onclick="saveSetup()">Save Setup →</button>
+        <span id="setup-status" class="status-msg"></span>
+      </div>
+    </section>
+
+    <!-- ── TEAMS TAB ─────────────────────────────────────────────────────── -->
+    <section id="tab-roster" class="tab-section">
+      <div class="page-header">
+        <h2>Team Roster</h2>
+        <p>Enter team names, then manage additions and removals between meets.</p>
+      </div>
+
+      <div class="two-col">
+        <!-- Left: roster editor -->
+        <div class="card">
+          <h3>Team Pool</h3>
+          <p class="card-note">Current pool of teams. Click ✕ to remove.</p>
+          <div id="team-pool-container" class="team-pool-container">
+            <!-- Team pills injected here -->
+          </div>
+          <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+          <h3>Add Teams</h3>
+          <p class="card-note">Enter new team names (one per line) to add to the pool.</p>
+          <textarea id="roster-textarea" class="roster-area" style="min-height: 120px;" placeholder="Team Alpha&#10;Team Beta&#10;Team Gamma&#10;..."></textarea>
+          <div class="action-row">
+            <button class="btn-primary" onclick="saveRoster()">Add to Pool</button>
+            <span id="roster-status" class="status-msg"></span>
+          </div>
+        </div>
+
+        <!-- Right: changes -->
+        <div class="card">
+          <h3>Roster Changes</h3>
+          <p class="card-note">Add or remove teams between specific meets.</p>
+
+          <div class="field-row">
+            <label class="field-label">Action</label>
+            <select id="chg-action" class="field-input sm">
+              <option value="add">Add team</option>
+              <option value="remove">Remove team</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label class="field-label">Team Name</label>
+            <input id="chg-team" type="text" class="field-input" placeholder="Team name" />
+          </div>
+          <div class="field-row">
+            <label class="field-label">Effective after Meet #</label>
+            <input id="chg-after" type="number" class="field-input sm" min="0" value="1" />
+            <span class="field-hint">e.g. 1 → takes effect from Meet 2 onward.</span>
+          </div>
+          <button class="btn-secondary" onclick="addChange()">Add Change</button>
+
+          <div id="changes-list" class="changes-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SCHEDULE TAB ───────────────────────────────────────────────────── -->
+    <section id="tab-schedule" class="tab-section">
+      <div class="page-header">
+        <h2>Schedule</h2>
+        <p>Generate, view, and lock individual quiz meets.</p>
+      </div>
+
+      <div id="meets-container" class="meets-container">
+        <!-- Meet cards injected here -->
+      </div>
+
+      <div id="gen-status" class="gen-status-bar"></div>
+    </section>
+
+    <!-- ── CROSS-REF TAB ──────────────────────────────────────────────────── -->
+    <section id="tab-cross" class="tab-section">
+      <div class="page-header">
+        <h2>Cross-Reference</h2>
+        <p>Head-to-head matchup counts across all generated meets.</p>
+      </div>
+      <div class="action-row">
+        <label class="field-label" style="margin-right:8px">Show meets up to:</label>
+        <select id="cross-up-to" class="field-input sm" onchange="renderCrossRef()"></select>
+        <button class="btn-secondary" onclick="renderCrossRef()">Refresh</button>
+      </div>
+      <div id="cross-table-wrap" class="cross-table-wrap"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ═══ SPINNER OVERLAY ═══════════════════════════════════════════════════════ -->
+<div id="spinner-overlay" class="spinner-overlay hidden">
+  <div class="spinner-box">
+    <div class="spinner-ring"></div>
+    <p id="spinner-msg">Generating schedule…</p>
+    <p class="spinner-sub">This may take a minute for large rosters.</p>
+  </div>
+</div>
+
+<!-- ═══ TOAST ════════════════════════════════════════════════════════════════ -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

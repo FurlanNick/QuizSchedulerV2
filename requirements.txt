@@ -1,0 +1,7 @@
+fastapi==0.115.0
+pydantic==2.9.2
+uvicorn==0.30.6
+pandas==2.2.1
+pre-commit==3.8.0
+numpy==1.26.4
+PuLP==2.9.0
