@@ -88,7 +88,7 @@ async def set_roster(req: RosterRequest):
     if not state:
         raise HTTPException(404, "Session not found.")
     names = [n.strip() for n in req.teams if n.strip()]
-    if len(names) < 3:
+    if names and len(names) < 3:
         raise HTTPException(400, "Need at least 3 teams.")
 
     # Check if the new list is a superset of the old one (ignoring order)

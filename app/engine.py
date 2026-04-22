@@ -169,6 +169,13 @@ def generate_meets(
         if _count_valid_matchups(filtered, n_active, mpt) < n_active * mpt // 3:
             filtered = all_possible
 
+        # Previous repeats per team (sum of (pair frequency - 1) for all pairs met)
+        team_prev_repeats = defaultdict(int)
+        for (l1, l2), cnt in local_freq.items():
+            reps = max(0, cnt - 1)
+            team_prev_repeats[l1] += reps
+            team_prev_repeats[l2] += reps
+
         def get_balancing_data(mu_list):
             weights = []
             mu_repeats = []
@@ -178,19 +185,19 @@ def generate_meets(
                 for i, j in itertools.combinations(range(3), 2):
                     pair = tuple(sorted([mu[i], mu[j]]))
                     cnt = local_freq.get(pair, 0)
-                    if cnt > 0:
-                        penalty += cnt
-                        team_reps[mu[i]] += cnt
-                        team_reps[mu[j]] += cnt
+                    if cnt >= 1: # Already met once, this is a repeat
+                        # Base penalty for the repeat itself
+                        penalty += 10
+                        # Extra penalty based on how many repeats the teams already have.
+                        # This pushes the solver to pick teams with FEWER existing repeats.
+                        penalty += team_prev_repeats[mu[i]]
+                        penalty += team_prev_repeats[mu[j]]
+
+                        team_reps[mu[i]] += 1
+                        team_reps[mu[j]] += 1
                 weights.append(-penalty + random.uniform(0, 0.01))
                 mu_repeats.append(dict(team_reps))
             return weights, mu_repeats
-
-        # Previous repeats per team (sum of pair frequencies involving that team)
-        team_prev_repeats = defaultdict(int)
-        for (l1, l2), cnt in local_freq.items():
-            team_prev_repeats[l1] += cnt
-            team_prev_repeats[l2] += cnt
 
         weights_f, repeats_f = get_balancing_data(filtered)
         solutions = solver_mu.find_matchup_solutions(

@@ -132,7 +132,10 @@
 
         <!-- Right: Team Pool -->
         <div class="card">
-          <h3>Team Pool</h3>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <h3 style="margin-bottom:0">Team Pool</h3>
+            <button id="btn-remove-all" class="btn-danger small hidden" onclick="clearRoster()">Remove All</button>
+          </div>
           <p class="card-note">Current pool of teams. Click ✕ to remove.</p>
           <div id="team-pool-container" class="team-pool-container">
             <!-- Team pills injected here -->

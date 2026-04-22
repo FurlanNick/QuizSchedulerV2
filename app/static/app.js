@@ -177,10 +177,15 @@ async function saveSetup() {
 // ── Roster ─────────────────────────────────────────────────────────────────
 function renderTeamPool() {
   const container = document.getElementById('team-pool-container');
+  const btnRemoveAll = document.getElementById('btn-remove-all');
+
   if (!STATE?.all_teams?.length) {
     container.innerHTML = '<p style="color:var(--ink-3);font-size:.82rem">No teams in pool.</p>';
+    if (btnRemoveAll) btnRemoveAll.classList.add('hidden');
     return;
   }
+
+  if (btnRemoveAll) btnRemoveAll.classList.remove('hidden');
   container.innerHTML = STATE.all_teams.map((t, i) => `
     <div class="team-pill">
       <span>${esc(t)}</span>
@@ -219,8 +224,8 @@ async function saveRoster() {
 async function deleteTeam(idx) {
   const updatedTeams = [...STATE.all_teams];
   const removed = updatedTeams.splice(idx, 1)[0];
-  if (updatedTeams.length < 3) {
-    toast('Cannot have fewer than 3 teams.', 'error');
+  if (updatedTeams.length > 0 && updatedTeams.length < 3) {
+    toast('Cannot have fewer than 3 teams (unless clearing all).', 'error');
     return;
   }
 
@@ -237,6 +242,23 @@ async function deleteTeam(idx) {
     renderTeamPool();
     renderMeets();
     toast(`Removed ${removed}`, 'success');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function clearRoster() {
+  let msg = "Are you sure you want to remove ALL teams from the pool?";
+  const hasUnlocked = STATE?.meets?.some(m => !m.is_locked);
+  if (hasUnlocked) {
+    msg += "\n\nWarning: This will reset any unlocked schedules.";
+  }
+  if (!confirm(msg)) return;
+
+  try {
+    await api('POST', '/api/roster', { session_id: SESSION_ID, teams: [] });
+    await refreshState();
+    renderTeamPool();
+    renderMeets();
+    toast('Team pool cleared', 'success');
   } catch (e) { toast(e.message, 'error'); }
 }
 
