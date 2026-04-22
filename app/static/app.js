@@ -137,11 +137,15 @@ function populateUIFromState() {
 
 // ── Setup ──────────────────────────────────────────────────────────────────
 async function saveSetup() {
-  if (STATE?.meets?.length > 0) {
+  // Check if anything is generated OR if configuration has changed
+  const hasSchedules = STATE?.meets?.length > 0;
+
+  if (hasSchedules) {
     if (!confirm("Warning: Saving a new setup will erase all currently generated schedules. Continue?")) {
       return;
     }
   }
+
   const config = {
     n_quiz_meets:     +document.getElementById('cfg-meets').value,
     n_rooms:          +document.getElementById('cfg-rooms').value,
@@ -262,7 +266,10 @@ function buildMeetCard(meetNum, meet, cfg) {
         const idx = STATE.all_teams.indexOf(ch.team_name);
         if (idx !== -1) {
           if (ch.action === 'remove') active.delete(idx + 1);
-          else if (ch.action === 'add') active.add(idx + 1);
+          else if (ch.action === 'add') {
+             // In case team was added to all_teams later
+             active.add(idx + 1);
+          }
         }
       }
     });

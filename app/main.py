@@ -85,17 +85,9 @@ async def set_roster(req: RosterRequest):
     # Also check if order of existing teams is preserved
     preserved_order = True
     for i, old_name in enumerate(state.all_teams):
-        if i < len(names) and names[i] == old_name:
-            continue
-        else:
-            # If it's not at the same index, it might have been moved or removed
-            if old_name in new_names_set:
-                # It's still there but moved. We should probably still allow this 
-                # but it might mess up team_ids if they rely on index.
-                pass
-            else:
-                preserved_order = False
-                break
+        if i >= len(names) or names[i] != old_name:
+            preserved_order = False
+            break
 
     if is_superset and preserved_order:
         # Just adding teams at the end
@@ -105,6 +97,10 @@ async def set_roster(req: RosterRequest):
         state.all_teams = names
         state.team_changes = []
         state.meets = []
+
+    # Keep config in sync if it exists
+    if state.config:
+        state.config.n_teams = len(names)
     
     save_session(state)
     return {"ok": True, "team_count": len(names)}
