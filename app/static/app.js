@@ -45,6 +45,48 @@ function switchTab(name) {
   if (name === 'cross')    renderCrossRefDropdown();
 }
 
+// ── Data Management ────────────────────────────────────────────────────────
+function exportSeason() {
+  if (!STATE) return;
+  const data = JSON.stringify(STATE, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `quiz_season_${STATE.owner_name.replace(/\s+/g, '_')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function importSeason(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const importedState = JSON.parse(e.target.result);
+      if (!importedState.owner_name || !importedState.all_teams) {
+        throw new Error('Invalid season data file.');
+      }
+
+      const res = await api('POST', '/api/import', {
+        session_id: SESSION_ID,
+        state: importedState
+      });
+
+      await refreshState();
+      populateUIFromState();
+      toast('Season data imported successfully!', 'success');
+    } catch (err) {
+      toast('Import failed: ' + err.message, 'error');
+    } finally {
+      event.target.value = ''; // Reset file input
+    }
+  };
+  reader.readAsText(file);
+}
+
 // ── Sign-in ────────────────────────────────────────────────────────────────
 async function doSignIn() {
   const name = document.getElementById('signin-name').value.trim();
@@ -90,12 +132,16 @@ function populateUIFromState() {
   // Roster
   renderTeamPool();
 
-  renderChanges();
   renderMeets();
 }
 
 // ── Setup ──────────────────────────────────────────────────────────────────
 async function saveSetup() {
+  if (STATE?.meets?.length > 0) {
+    if (!confirm("Warning: Saving a new setup will erase all currently generated schedules. Continue?")) {
+      return;
+    }
+  }
   const config = {
     n_quiz_meets:     +document.getElementById('cfg-meets').value,
     n_rooms:          +document.getElementById('cfg-rooms').value,
@@ -161,7 +207,12 @@ async function deleteTeam(idx) {
     toast('Cannot have fewer than 3 teams.', 'error');
     return;
   }
-  if (!confirm(`Are you sure you want to remove "${removed}" from the pool?`)) return;
+
+  let msg = `Are you sure you want to remove "${removed}" from the pool?`;
+  if (STATE?.meets?.length > 0) {
+    msg += "\n\nWarning: Removing a team from the pool will reset all currently generated schedules.";
+  }
+  if (!confirm(msg)) return;
 
   try {
     await api('POST', '/api/roster', { session_id: SESSION_ID, teams: updatedTeams });
@@ -173,47 +224,6 @@ async function deleteTeam(idx) {
 }
 
 // ── Team changes ───────────────────────────────────────────────────────────
-async function addChange() {
-  const action    = document.getElementById('chg-action').value;
-  const team_name = document.getElementById('chg-team').value.trim();
-  const after     = +document.getElementById('chg-after').value;
-  if (!team_name) { toast('Enter a team name.', 'error'); return; }
-  try {
-    await api('POST', '/api/team-change', {
-      session_id: SESSION_ID, action, team_name,
-      effective_after_meet: after,
-    });
-    await refreshState();
-    document.getElementById('chg-team').value = '';
-    renderChanges();
-    toast(`Change recorded: ${action} "${team_name}" after Meet ${after}`, 'success');
-  } catch (e) { toast(e.message, 'error'); }
-}
-
-async function deleteChange(idx) {
-  try {
-    await api('DELETE', `/api/team-change/${SESSION_ID}/${idx}`);
-    await refreshState();
-    renderChanges();
-  } catch (e) { toast(e.message, 'error'); }
-}
-
-function renderChanges() {
-  const list = document.getElementById('changes-list');
-  if (!STATE?.team_changes?.length) {
-    list.innerHTML = '<p style="color:var(--ink-3);font-size:.82rem">No changes recorded.</p>';
-    return;
-  }
-  list.innerHTML = STATE.team_changes.map((c, i) => `
-    <div class="change-pill">
-      <span>
-        <span class="badge badge-${c.action}">${c.action}</span>
-        &nbsp;${esc(c.team_name)}&nbsp;—&nbsp;after Meet ${c.effective_after_meet}
-      </span>
-      <button class="btn-danger" onclick="deleteChange(${i})">✕</button>
-    </div>
-  `).join('');
-}
 
 // ── Schedule tab ───────────────────────────────────────────────────────────
 function renderMeets() {
@@ -243,7 +253,21 @@ function buildMeetCard(meetNum, meet, cfg) {
   const statusLabel = status === 'pending' ? '⬡ Not generated'
                     : status === 'locked'  ? '✓ Locked'
                     :                        '● Ready';
-  const nActive = meet?.active_team_ids?.length ?? cfg.n_teams;
+  let nActive = meet?.active_team_ids?.length;
+  if (nActive === undefined) {
+    // Calculate expected active teams based on current pool + changes
+    const active = new Set(STATE.all_teams.map((_, i) => i + 1));
+    (STATE.team_changes || []).forEach(ch => {
+      if (ch.effective_after_meet < meetNum) {
+        const idx = STATE.all_teams.indexOf(ch.team_name);
+        if (idx !== -1) {
+          if (ch.action === 'remove') active.delete(idx + 1);
+          else if (ch.action === 'add') active.add(idx + 1);
+        }
+      }
+    });
+    nActive = active.size;
+  }
   const relaxed = meet?.constraints_relaxed?.length
     ? `<br><span style="color:var(--orange);font-size:.76rem">⚠ Relaxed: ${meet.constraints_relaxed.join(', ')}</span>` : '';
 

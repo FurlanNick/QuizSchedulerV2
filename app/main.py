@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.models import (
     SignInRequest, SignInResponse,
     SetupRequest, RosterRequest, TeamChangeRequest,
-    GenerateMeetRequest, LockMeetRequest,
+    GenerateMeetRequest, LockMeetRequest, ImportRequest,
     ProgramConfig, ProgramState,
     MatchupsRequest, MatchupsResponse, Matchup,
     ScheduleRequest, ScheduleResponse, ScheduleItem,
@@ -200,6 +200,19 @@ async def lock_meet(req: LockMeetRequest):
             save_session(state)
             return {"ok": True}
     raise HTTPException(404, f"Meet {req.meet_number} not found.")
+
+
+@app.post("/api/import")
+async def import_state(req: ImportRequest):
+    state = get_session(req.session_id)
+    if not state:
+        raise HTTPException(404, "Session not found.")
+
+    # Overwrite current state but keep the session ID consistent with the request
+    imported = req.state
+    imported.session_id = req.session_id
+    save_session(imported)
+    return {"ok": True}
 
 
 # ── Legacy single-shot endpoints (kept for compatibility) ─────────────────────

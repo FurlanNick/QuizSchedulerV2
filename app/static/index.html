@@ -49,6 +49,9 @@
       <li class="nav-item" data-tab="cross"    onclick="switchTab('cross')">
         <span class="nav-icon">🔀</span> Cross-Ref
       </li>
+      <li class="nav-item" data-tab="data"     onclick="switchTab('data')">
+        <span class="nav-icon">💾</span> Data
+      </li>
     </ul>
     <div class="sidebar-foot">
       <button class="btn-ghost small" onclick="doSignOut()">Sign out</button>
@@ -112,20 +115,14 @@
     <section id="tab-roster" class="tab-section">
       <div class="page-header">
         <h2>Team Roster</h2>
-        <p>Enter team names, then manage additions and removals between meets.</p>
+        <p>Manage your team pool. Add or remove teams as the season progresses.</p>
       </div>
 
       <div class="two-col">
-        <!-- Left: roster editor -->
+        <!-- Left: Add Teams -->
         <div class="card">
-          <h3>Team Pool</h3>
-          <p class="card-note">Current pool of teams. Click ✕ to remove.</p>
-          <div id="team-pool-container" class="team-pool-container">
-            <!-- Team pills injected here -->
-          </div>
-          <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
           <h3>Add Teams</h3>
-          <p class="card-note">Enter new team names (one per line) to add to the pool.</p>
+          <p class="card-note">Enter team names (one per line) to add to the pool.</p>
           <textarea id="roster-textarea" class="roster-area" style="min-height: 120px;" placeholder="Team Alpha&#10;Team Beta&#10;Team Gamma&#10;..."></textarea>
           <div class="action-row">
             <button class="btn-primary" onclick="saveRoster()">Add to Pool</button>
@@ -133,30 +130,13 @@
           </div>
         </div>
 
-        <!-- Right: changes -->
+        <!-- Right: Team Pool -->
         <div class="card">
-          <h3>Roster Changes</h3>
-          <p class="card-note">Add or remove teams between specific meets.</p>
-
-          <div class="field-row">
-            <label class="field-label">Action</label>
-            <select id="chg-action" class="field-input sm">
-              <option value="add">Add team</option>
-              <option value="remove">Remove team</option>
-            </select>
+          <h3>Team Pool</h3>
+          <p class="card-note">Current pool of teams. Click ✕ to remove.</p>
+          <div id="team-pool-container" class="team-pool-container">
+            <!-- Team pills injected here -->
           </div>
-          <div class="field-row">
-            <label class="field-label">Team Name</label>
-            <input id="chg-team" type="text" class="field-input" placeholder="Team name" />
-          </div>
-          <div class="field-row">
-            <label class="field-label">Effective after Meet #</label>
-            <input id="chg-after" type="number" class="field-input sm" min="0" value="1" />
-            <span class="field-hint">e.g. 1 → takes effect from Meet 2 onward.</span>
-          </div>
-          <button class="btn-secondary" onclick="addChange()">Add Change</button>
-
-          <div id="changes-list" class="changes-list"></div>
         </div>
       </div>
     </section>
@@ -187,6 +167,27 @@
         <button class="btn-secondary" onclick="renderCrossRef()">Refresh</button>
       </div>
       <div id="cross-table-wrap" class="cross-table-wrap"></div>
+    </section>
+
+    <!-- ── DATA TAB ───────────────────────────────────────────────────────── -->
+    <section id="tab-data" class="tab-section">
+      <div class="page-header">
+        <h2>Data Management</h2>
+        <p>Export or import your full season data.</p>
+      </div>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Export Season</h3>
+          <p class="card-note">Download your entire season configuration and schedules as a JSON file.</p>
+          <button class="btn-primary" onclick="exportSeason()">Download .json</button>
+        </div>
+        <div class="card">
+          <h3>Import Season</h3>
+          <p class="card-note">Restore a season from a previously exported JSON file.</p>
+          <input type="file" id="import-file" style="display:none" onchange="importSeason(event)" accept=".json" />
+          <button class="btn-secondary" onclick="document.getElementById('import-file').click()">Upload .json</button>
+        </div>
+      </div>
     </section>
 
   </main>
