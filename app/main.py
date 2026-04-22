@@ -58,9 +58,24 @@ async def setup(req: SetupRequest):
     state = get_session(req.session_id)
     if not state:
         raise HTTPException(404, "Session not found.")
+
+    # Only reset meets if core config changes
+    changed = True
+    if state.config:
+        c1 = state.config
+        c2 = req.config
+        if (c1.n_quiz_meets == c2.n_quiz_meets and
+            c1.n_rooms == c2.n_rooms and
+            c1.n_time_slots == c2.n_time_slots and
+            c1.matches_per_team == c2.matches_per_team and
+            c1.tournament_type == c2.tournament_type):
+            changed = False
+
     state.config = req.config
-    # Reset meets if config changes
-    state.meets = []
+    if changed:
+        state.meets = []
+        state.team_changes = []
+
     save_session(state)
     return {"ok": True, "message": "Configuration saved."}
 
@@ -95,8 +110,8 @@ async def set_roster(req: RosterRequest):
     else:
         # Destructive change (removal or reorder)
         state.all_teams = names
-        state.team_changes = []
-        state.meets = []
+        # Keep locked meets, but remove unlocked ones as they may no longer be valid
+        state.meets = [m for m in state.meets if m.is_locked]
 
     # Keep config in sync if it exists
     if state.config:

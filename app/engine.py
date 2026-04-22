@@ -41,21 +41,26 @@ def _active_team_ids(
     effective_after_meet < meet_number.
     """
     # Build a set of active indices (0-based into all_teams)
-    active: Set[int] = set(range(len(all_teams)))
+    active_indices: Set[int] = set(range(len(all_teams)))
+
+    # We also need to handle teams that might have been removed from all_teams
+    # but are still referenced in locked meets. However, all_teams is the current master list.
+    # If a team was removed from all_teams, it's truly gone from the pool.
 
     for ch in sorted(changes, key=lambda c: c.effective_after_meet):
         if ch.effective_after_meet >= meet_number:
             continue
         try:
             idx = all_teams.index(ch.team_name)
+            if ch.action == "remove":
+                active_indices.discard(idx)
+            elif ch.action == "add":
+                active_indices.add(idx)
         except ValueError:
+            # If team is not in all_teams, it can't be active anyway
             continue
-        if ch.action == "remove":
-            active.discard(idx)
-        elif ch.action == "add":
-            active.add(idx)
 
-    return sorted(i + 1 for i in active)  # 1-based IDs, sorted
+    return sorted(i + 1 for i in active_indices)  # 1-based IDs, sorted
 
 
 # ── Helper: cross-meet pair-frequency table ───────────────────────────────────
@@ -63,13 +68,18 @@ def _active_team_ids(
 def _pair_frequencies(
     meets: List[QuizMeetSchedule],
     locked_only: bool = False,
-) -> Dict[Tuple[int, int], int]:
-    freq: Dict[Tuple[int, int], int] = defaultdict(int)
+) -> Dict[Tuple[str, str], int]:
+    """
+    Returns a mapping of (team_name, team_name) -> count.
+    Uses names instead of IDs because IDs (indices) can change if the roster is modified.
+    """
+    freq: Dict[Tuple[str, str], int] = defaultdict(int)
     for m in meets:
         if locked_only and not m.is_locked:
             continue
         for room in m.rooms:
-            t1, t2, t3 = sorted(room.team_ids)
+            # Use team_names for stable cross-meet history
+            t1, t2, t3 = sorted(room.team_names)
             freq[(t1, t2)] += 1
             freq[(t1, t3)] += 1
             freq[(t2, t3)] += 1
@@ -106,6 +116,7 @@ def generate_meets(
 
     for meet_num in sorted_targets:
         active_ids = _active_team_ids(state.all_teams, state.team_changes, meet_num)
+        active_names = [state.all_teams[gid - 1] for gid in active_ids]
         n_active = len(active_ids)
 
         if n_active < 3:
@@ -125,13 +136,13 @@ def generate_meets(
 
         # Build matchups using *local* team indices 1..n_active, then map back
         local_to_global = {i + 1: gid for i, gid in enumerate(active_ids)}
-        global_to_local = {gid: i + 1 for i, gid in enumerate(active_ids)}
+        name_to_local = {name: i + 1 for i, name in enumerate(active_names)}
 
-        # Translate running_freq into local IDs for the solver
+        # Translate running_freq (names) into local IDs for the solver
         local_freq: Dict[Tuple[int, int], int] = defaultdict(int)
-        for (g1, g2), cnt in running_freq.items():
-            if g1 in global_to_local and g2 in global_to_local:
-                l1, l2 = sorted([global_to_local[g1], global_to_local[g2]])
+        for (n1, n2), cnt in running_freq.items():
+            if n1 in name_to_local and n2 in name_to_local:
+                l1, l2 = sorted([name_to_local[n1], name_to_local[n2]])
                 local_freq[(l1, l2)] += cnt
 
         # Generate matchups
@@ -255,7 +266,7 @@ def generate_meets(
 
         # Update running frequency for subsequent meets
         for room in rooms:
-            t1, t2, t3 = sorted(room.team_ids)
+            t1, t2, t3 = sorted(room.team_names)
             running_freq[(t1, t2)] = running_freq.get((t1, t2), 0) + 1
             running_freq[(t1, t3)] = running_freq.get((t1, t3), 0) + 1
             running_freq[(t2, t3)] = running_freq.get((t2, t3), 0) + 1

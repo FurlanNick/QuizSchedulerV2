@@ -137,16 +137,7 @@ function populateUIFromState() {
 
 // ── Setup ──────────────────────────────────────────────────────────────────
 async function saveSetup() {
-  // Check if anything is generated OR if configuration has changed
-  const hasSchedules = STATE?.meets?.length > 0;
-
-  if (hasSchedules) {
-    if (!confirm("Warning: Saving a new setup will erase all currently generated schedules. Continue?")) {
-      return;
-    }
-  }
-
-  const config = {
+  const newConfig = {
     n_quiz_meets:     +document.getElementById('cfg-meets').value,
     n_rooms:          +document.getElementById('cfg-rooms').value,
     n_time_slots:     +document.getElementById('cfg-slots').value,
@@ -154,8 +145,29 @@ async function saveSetup() {
     matches_per_team: +document.getElementById('cfg-mpt').value,
     tournament_type:  document.getElementById('cfg-type').value,
   };
+
+  // Check if anything is generated OR if configuration has changed
+  const hasSchedules = STATE?.meets?.length > 0;
+  let changed = true;
+  if (STATE?.config) {
+    const c = STATE.config;
+    if (c.n_quiz_meets === newConfig.n_quiz_meets &&
+        c.n_rooms === newConfig.n_rooms &&
+        c.n_time_slots === newConfig.n_time_slots &&
+        c.matches_per_team === newConfig.matches_per_team &&
+        c.tournament_type === newConfig.tournament_type) {
+      changed = false;
+    }
+  }
+
+  if (hasSchedules && changed) {
+    if (!confirm("Warning: Saving a new setup will erase all currently generated schedules. Continue?")) {
+      return;
+    }
+  }
+
   try {
-    await api('POST', '/api/setup', { session_id: SESSION_ID, config });
+    await api('POST', '/api/setup', { session_id: SESSION_ID, config: newConfig });
     await refreshState();
     document.getElementById('setup-status').textContent = '✓ Saved';
     setTimeout(() => document.getElementById('setup-status').textContent = '', 2500);
@@ -213,8 +225,9 @@ async function deleteTeam(idx) {
   }
 
   let msg = `Are you sure you want to remove "${removed}" from the pool?`;
-  if (STATE?.meets?.length > 0) {
-    msg += "\n\nWarning: Removing a team from the pool will reset all currently generated schedules.";
+  const hasUnlocked = STATE?.meets?.some(m => !m.is_locked);
+  if (hasUnlocked) {
+    msg += "\n\nWarning: Removing a team will reset any unlocked schedules.";
   }
   if (!confirm(msg)) return;
 
@@ -416,43 +429,47 @@ function renderCrossRef() {
 
   const upTo = +document.getElementById('cross-up-to').value || Infinity;
 
-  // Build frequency map
+  // Build frequency map using team names as stable identifiers
   const freq = {};
-  const allTeamIds = new Set();
+  const allTeamNames = new Set();
 
   STATE.meets.filter(m => m.meet_number <= upTo).forEach(m => {
     m.rooms.forEach(r => {
-      const ids = r.team_ids;
-      for (let i=0;i<3;i++) {
-        allTeamIds.add(ids[i]);
-        for (let j=i+1;j<3;j++) {
-          const key = `${Math.min(ids[i],ids[j])}_${Math.max(ids[i],ids[j])}`;
+      const names = r.team_names;
+      for (let i = 0; i < 3; i++) {
+        allTeamNames.add(names[i]);
+        for (let j = i + 1; j < 3; j++) {
+          const t1 = names[i];
+          const t2 = names[j];
+          const key = [t1, t2].sort().join('||');
           freq[key] = (freq[key] || 0) + 1;
         }
       }
     });
   });
 
-  const teamIds = [...allTeamIds].sort((a,b)=>a-b);
-  const name = id => STATE.all_teams[id-1] ?? `T${id}`;
-  const cnt  = (a,b) => freq[`${Math.min(a,b)}_${Math.max(a,b)}`] || 0;
+  const sortedNames = [...allTeamNames].sort();
+  const cnt = (n1, n2) => {
+    const key = [n1, n2].sort().join('||');
+    return freq[key] || 0;
+  };
 
   // Header row
   let html = '<table class="cross-table"><thead><tr><th>Team</th>';
-  teamIds.forEach(id => { html += `<th title="${esc(name(id))}">${esc(abbr(name(id)))}</th>`; });
+  sortedNames.forEach(name => { html += `<th title="${esc(name)}">${esc(abbr(name))}</th>`; });
   html += '<th class="sum-col">Σ</th></tr></thead><tbody>';
 
-  teamIds.forEach(t1 => {
+  sortedNames.forEach(n1 => {
     let rowSum = 0;
     let cells = '';
-    teamIds.forEach(t2 => {
-      if (t1 === t2) { cells += '<td class="diag">—</td>'; return; }
-      const c = cnt(t1, t2);
+    sortedNames.forEach(n2 => {
+      if (n1 === n2) { cells += '<td class="diag">—</td>'; return; }
+      const c = cnt(n1, n2);
       rowSum += c;
       const cls = c === 0 ? 'cnt-0' : c === 1 ? 'cnt-1' : c === 2 ? 'cnt-2' : 'cnt-hi';
       cells += `<td class="${cls}">${c || ''}</td>`;
     });
-    html += `<tr><td class="row-head">${esc(name(t1))}</td>${cells}<td class="sum-col">${rowSum}</td></tr>`;
+    html += `<tr><td class="row-head">${esc(n1)}</td>${cells}<td class="sum-col">${rowSum}</td></tr>`;
   });
 
   html += '</tbody></table>';
