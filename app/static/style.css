@@ -488,6 +488,66 @@ select.field-input { cursor: pointer; }
 .sched-grid tr:last-child td { border-bottom: none; }
 .sched-grid tr:hover td { background: var(--bg-hover); }
 
+.sched-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+}
+
+.sched-grid.transposed {
+  margin-top: 0;
+  table-layout: fixed;
+  min-width: 800px; /* Ensure enough room for columns */
+}
+
+.sched-grid.transposed th {
+  text-align: center;
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.sched-grid.transposed th:last-child {
+  border-right: none;
+}
+
+.sched-grid.transposed td {
+  text-align: center;
+  border-right: 1px solid var(--border);
+  vertical-align: middle;
+  padding: 12px 8px;
+  position: relative;
+}
+
+.sched-grid.transposed td:last-child {
+  border-right: none;
+}
+
+.sched-grid.transposed td::before {
+  content: attr(data-label);
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sched-grid.transposed tr:nth-child(3n) td {
+  border-bottom: 2px solid var(--border-hi);
+}
+
+.empty-cell {
+  color: var(--ink-3) !important;
+  font-style: italic;
+}
+
 .pos-a { color: #4f7eff; }
 .pos-b { color: #a78bfa; }
 .pos-c { color: #38bdf8; }

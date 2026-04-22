@@ -373,29 +373,29 @@ function viewMeet(meetNum) {
   const meet = STATE.meets.find(m => m.meet_number === meetNum);
   if (!meet) return;
 
-  const teamName = id => STATE.all_teams[id - 1] ?? `Team ${id}`;
+  const rooms = [...new Set(meet.rooms.map(r => r.room))].sort((a,b) => a - b);
+  const slots = [...new Set(meet.rooms.map(r => r.time_slot))].sort((a,b) => a - b);
 
-  // Group rooms by time slot
-  const bySlot = {};
-  meet.rooms.forEach(r => {
-    bySlot[r.time_slot] = bySlot[r.time_slot] || [];
-    bySlot[r.time_slot].push(r);
+  const header = rooms.map(r => `<th>Room ${r}</th>`).join('');
+
+  const rows = [];
+  slots.forEach(slot => {
+    ['A', 'B', 'C'].forEach(pos => {
+      let rowHtml = '<tr>';
+      rooms.forEach(roomNum => {
+        const roomData = meet.rooms.find(r => r.room === roomNum && r.time_slot === slot);
+        const posIdx = (pos === 'A' ? 0 : pos === 'B' ? 1 : 2);
+        const tName = roomData ? roomData.team_names[posIdx] : null;
+        const posClass = pos === 'A' ? 'pos-a' : pos === 'B' ? 'pos-b' : 'pos-c';
+
+        rowHtml += `<td data-label="S${slot}-${pos}">
+          ${tName ? `<div class="${posClass}">${esc(tName)}</div>` : '<div class="empty-cell">—</div>'}
+        </td>`;
+      });
+      rowHtml += '</tr>';
+      rows.push(rowHtml);
+    });
   });
-
-  const rows = Object.entries(bySlot)
-    .sort(([a],[b]) => +a - +b)
-    .flatMap(([slot, rooms]) =>
-      rooms.sort((a,b) => a.room - b.room).map(r => {
-        const [a,b,c] = r.team_names;
-        return `<tr>
-          <td>Slot ${slot}</td>
-          <td>Room ${r.room}</td>
-          <td class="pos-a">${esc(a)}</td>
-          <td class="pos-b">${esc(b)}</td>
-          <td class="pos-c">${esc(c)}</td>
-        </tr>`;
-      })
-    ).join('');
 
   const relaxNote = meet.constraints_relaxed.length
     ? `<p style="color:var(--orange);margin-bottom:12px;font-size:.82rem">⚠ Constraints relaxed: ${meet.constraints_relaxed.join(', ')}</p>` : '';
@@ -413,13 +413,12 @@ function viewMeet(meetNum) {
             ${meet.active_team_ids.length} active teams · ${meet.rooms.length} rooms
             ${meet.is_locked ? '· <span style="color:var(--green)">🔒 Locked</span>' : ''}
           </p>
-          <table class="sched-grid">
-            <thead><tr><th>Slot</th><th>Room</th>
-              <th class="pos-a">Position A</th>
-              <th class="pos-b">Position B</th>
-              <th class="pos-c">Position C</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
+          <div class="sched-table-wrap">
+            <table class="sched-grid transposed">
+              <thead><tr>${header}</tr></thead>
+              <tbody>${rows.join('')}</tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>`;
