@@ -388,7 +388,7 @@ function viewMeet(meetNum) {
         const tName = roomData ? roomData.team_names[posIdx] : null;
         const posClass = pos === 'A' ? 'pos-a' : pos === 'B' ? 'pos-b' : 'pos-c';
 
-        rowHtml += `<td data-label="S${slot}-${pos}">
+        rowHtml += `<td>
           ${tName ? `<div class="${posClass}">${esc(tName)}</div>` : '<div class="empty-cell">—</div>'}
         </td>`;
       });
