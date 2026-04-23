@@ -1,3 +1,4 @@
+import logging
 import os
 import traceback
 from fastapi import FastAPI, HTTPException
@@ -16,6 +17,8 @@ from app.session_store import get_or_create_session, get_session, save_session
 from app.matchups import MatchupSolver
 from app.scheduler import ScheduleSolver
 from app.engine import generate_meets
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="Quiz Schedule Generator",
