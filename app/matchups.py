@@ -12,11 +12,21 @@ class MatchupSolver:
         self.tournament_type = tournament_type # Store tournament type
 
     def generate_all_possible_matchups(self) -> List[Tuple[int, int, int]]:
-        teams = list(range(1, self.n_teams + 1))
+        # Include team 0 as a dummy team for 2-team matches (doubles)
+        teams = list(range(0, self.n_teams + 1))
         all_triples = list(itertools.combinations(teams, 3))
+
         possible_matchups = []
         for triple in all_triples:
+            # We only allow triples with 0 or 1 dummy team (team 0).
+            # A triple with two 0s would be a 1-team match, which we don't want.
+            if triple.count(0) > 1:
+                continue
+
             for perm in itertools.permutations(triple):
+                # In a double (2-team match), the dummy team 0 should preferably
+                # be in position C (index 2) for consistency in the UI,
+                # but we'll allow all permutations and let the ILP decide.
                 possible_matchups.append(perm)
         return possible_matchups
 
@@ -65,6 +75,19 @@ class MatchupSolver:
                 problem += total_t >= min_rep
                 problem += total_t <= max_rep
             problem += max_rep - min_rep <= 1
+
+        # Total slots needed across all matches
+        total_slots_needed = self.n_teams * self.n_matches_per_team
+        # Number of matches (each match has 3 slots)
+        num_matches = math.ceil(total_slots_needed / 3)
+        # Number of dummy slots (team 0) needed
+        num_dummies = (num_matches * 3) - total_slots_needed
+
+        # Exact number of matches to pick
+        problem += pulp.lpSum(variables[i] for i in range(len(matchups))) == num_matches
+
+        # Exact number of dummy team (0) participations
+        problem += pulp.lpSum(variables[i] for i, M in enumerate(matchups) if 0 in M) == num_dummies
 
         self.enforce_constraints(problem, variables, matchups)
 
@@ -260,12 +283,6 @@ class MatchupSolver:
 
         assert self.n_matches_per_team >= 0, \
             f"Number of matches per team must be non-negative. Got {self.n_matches_per_team}."
-
-        # The product of total teams and matches per team must be divisible by 3,
-        # as each match involves 3 teams.
-        assert (self.n_teams * self.n_matches_per_team) % 3 == 0, \
-            f"The product of teams and matches_per_team ({self.n_teams} * {self.n_matches_per_team} = " \
-            f"{self.n_teams * self.n_matches_per_team}) must be divisible by 3."
 
         # Previous assertions like `self.n_teams > 2 * self.n_matches_per_team` or 
         # `self.n_teams % 3 == 0 if self.n_matches_per_team % 3 != 0` have been removed
