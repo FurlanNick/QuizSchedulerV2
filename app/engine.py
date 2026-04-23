@@ -10,6 +10,7 @@ Wraps the existing MatchupSolver / ScheduleSolver with the higher-level concepts
 from __future__ import annotations
 
 import itertools
+import logging
 import math
 import random
 from collections import defaultdict
@@ -138,11 +139,16 @@ def generate_meets(
                 l1, l2 = sorted([name_to_local[n1], name_to_local[n2]])
                 local_freq[(l1, l2)] += cnt
 
+        effective_tournament_type = cfg.tournament_type
+        if cfg.n_quiz_meets == 1 and cfg.tournament_type == "district":
+            logging.info("Overriding tournament type to international for single-meet season.")
+            effective_tournament_type = "international"
+
         # Generate matchups
         solver_mu = MatchupSolver(
             n_teams=n_active,
             n_matches_per_team=mpt,
-            tournament_type=cfg.tournament_type,
+            tournament_type=effective_tournament_type,
         )
         all_possible = solver_mu.generate_all_possible_matchups()
 
@@ -227,7 +233,7 @@ def generate_meets(
             n_teams=n_active,
             n_matches_per_team=mpt,
             n_rooms=cfg.n_rooms,
-            tournament_type=cfg.tournament_type,
+            tournament_type=effective_tournament_type,
             phase_buffer_slots=cfg.n_time_slots,
             international_buffer_slots=cfg.n_time_slots,
             matches_per_day=mpt,

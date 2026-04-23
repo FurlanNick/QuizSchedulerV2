@@ -97,12 +97,6 @@ class ScheduleSolver:
         if self.matches_per_day <= 0:
             raise ValueError("Matches per day for District mode must be positive.")
         
-        if self.matches_per_day > self.n_rooms:
-            raise ValueError(
-                f"For District mode's 'unique room per day' rule, the number of rooms ({self.n_rooms}) "
-                f"must be >= matches per day ({self.matches_per_day})."
-            )
-
         num_total_phases = math.ceil(self.n_matches_per_team / self.matches_per_day)
         if num_total_phases == 0 and self.n_matches_per_team == 0:
             self.n_time_slots = 0
@@ -250,12 +244,22 @@ class ScheduleSolver:
         
         if "room_diversity" not in relax_constraints:
             for team_id in range(1, self.n_teams + 1):
+                # If matches_per_day > n_rooms, teams must visit rooms multiple times.
+                # We balance this such that they visit each room an even number of times.
+                avg_visits = target_matches_per_team_in_phase / self.n_rooms if self.n_rooms > 0 else 0
+                lower_bound = math.floor(avg_visits)
+                upper_bound = math.ceil(avg_visits)
+
                 for room_j in range(1, self.n_rooms + 1):
-                    problem += pulp.lpSum(
+                    matches_for_team_in_room_j = pulp.lpSum(
                         variables[m_idx][room_j][ts_idx]
                         for m_idx, m_obj in enumerate(matchups_in_phase) if team_id in m_obj.teams
                         for ts_idx in range(1, n_time_slots_in_phase + 1)
-                    ) <= 1, f"DistrictRoomDiversity_Phase{phase_idx}_T{team_id}_R{room_j}"
+                    )
+                    problem += matches_for_team_in_room_j >= lower_bound, \
+                               f"DistrictRoomDiversity_Min_Phase{phase_idx}_T{team_id}_R{room_j}"
+                    problem += matches_for_team_in_room_j <= upper_bound, \
+                               f"DistrictRoomDiversity_Max_Phase{phase_idx}_T{team_id}_R{room_j}"
         return problem
 
     def _enforce_constraints_for_full_schedule(
