@@ -91,6 +91,7 @@ async function importSeason(event) {
 async function doSignIn() {
   const name = document.getElementById('signin-name').value.trim();
   if (!name) { toast('Please enter a name.', 'error'); return; }
+  resetUI();
   try {
     const res = await api('POST', '/api/signin', { name });
     SESSION_ID = res.session_id;
@@ -98,14 +99,38 @@ async function doSignIn() {
     document.getElementById('nav-user').textContent = res.name;
     setView('view-app');
     toast(res.is_new ? `Welcome, ${res.name}!` : `Welcome back, ${res.name}!`, 'success');
-    if (!res.is_new) populateUIFromState();
+    populateUIFromState();
   } catch (e) { toast(e.message, 'error'); }
 }
 
 function doSignOut() {
   SESSION_ID = null; STATE = null;
+  resetUI();
   setView('view-signin');
   document.getElementById('signin-name').value = '';
+}
+
+function resetUI() {
+  // Setup fields
+  document.getElementById('cfg-meets').value = 4;
+  document.getElementById('cfg-rooms').value = 5;
+  document.getElementById('cfg-slots').value = 6;
+  document.getElementById('cfg-mpt').value   = 3;
+  document.getElementById('cfg-type').value  = 'district';
+
+  // Roster
+  document.getElementById('roster-textarea').value = '';
+  document.getElementById('team-pool-container').innerHTML = '';
+  const btnRemoveAll = document.getElementById('btn-remove-all');
+  if (btnRemoveAll) btnRemoveAll.classList.add('hidden');
+
+  // Schedule
+  document.getElementById('meets-container').innerHTML = '';
+  document.getElementById('gen-status').textContent = '';
+
+  // Cross-ref
+  document.getElementById('cross-table-wrap').innerHTML = '';
+  document.getElementById('cross-up-to').innerHTML = '';
 }
 
 document.getElementById('signin-name').addEventListener('keydown', e => {
@@ -146,22 +171,10 @@ async function saveSetup() {
     tournament_type:  document.getElementById('cfg-type').value,
   };
 
-  // Check if anything is generated OR if configuration has changed
-  const hasSchedules = STATE?.meets?.length > 0;
-  let changed = true;
-  if (STATE?.config) {
-    const c = STATE.config;
-    if (c.n_quiz_meets === newConfig.n_quiz_meets &&
-        c.n_rooms === newConfig.n_rooms &&
-        c.n_time_slots === newConfig.n_time_slots &&
-        c.matches_per_team === newConfig.matches_per_team &&
-        c.tournament_type === newConfig.tournament_type) {
-      changed = false;
-    }
-  }
-
-  if (hasSchedules && changed) {
-    if (!confirm("Warning: Saving a new setup will erase all currently generated schedules. Continue?")) {
+  // Setup is now always destructive. Warn if there is existing data.
+  const hasData = (STATE?.meets?.length > 0) || (STATE?.all_teams?.length > 0);
+  if (hasData) {
+    if (!confirm("Warning: Saving a new setup will erase all currently generated teams and schedules. This allows for a fresh start. Continue?")) {
       return;
     }
   }
@@ -169,6 +182,7 @@ async function saveSetup() {
   try {
     await api('POST', '/api/setup', { session_id: SESSION_ID, config: newConfig });
     await refreshState();
+    populateUIFromState();
     document.getElementById('setup-status').textContent = '✓ Saved';
     setTimeout(() => document.getElementById('setup-status').textContent = '', 2500);
   } catch (e) { toast(e.message, 'error'); }

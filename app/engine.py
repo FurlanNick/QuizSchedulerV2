@@ -125,14 +125,7 @@ def generate_meets(
                 "At least 3 teams are required."
             )
 
-        # Validate divisibility: n_active * matches_per_team must be divisible by 3
         mpt = cfg.matches_per_team
-        while (n_active * mpt) % 3 != 0 and mpt > 0:
-            mpt -= 1
-        if mpt == 0:
-            raise ValueError(
-                f"Cannot find a valid matches_per_team for {n_active} active teams."
-            )
 
         # Build matchups using *local* team indices 1..n_active, then map back
         local_to_global = {i + 1: gid for i, gid in enumerate(active_ids)}
@@ -251,8 +244,9 @@ def generate_meets(
         rooms: List[ScheduleRoom] = []
         for _, row in schedule_df.iterrows():
             local_ids = tuple(int(x) for x in row["Matchup"].teams)
-            global_ids = tuple(local_to_global[lid] for lid in local_ids)
-            names = tuple(state.all_teams[gid - 1] for gid in global_ids)
+            # Handle team 0 (dummy team) by mapping to 0 and empty string
+            global_ids = tuple((local_to_global[lid] if lid != 0 else 0) for lid in local_ids)
+            names = tuple((state.all_teams[gid - 1] if gid != 0 else "—") for gid in global_ids)
             rooms.append(
                 ScheduleRoom(
                     time_slot=int(row["TimeSlot"]),
