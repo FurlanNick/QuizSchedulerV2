@@ -518,25 +518,12 @@ select.field-input { cursor: pointer; }
   text-align: center;
   border-right: 1px solid var(--border);
   vertical-align: middle;
-  padding: 12px 8px;
+  padding: 8px 8px;
   position: relative;
 }
 
 .sched-grid.transposed td:last-child {
   border-right: none;
-}
-
-.sched-grid.transposed td::before {
-  content: attr(data-label);
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.6rem;
-  color: var(--ink-3);
-  text-transform: uppercase;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .sched-grid.transposed tr:nth-child(3n) td {
