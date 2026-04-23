@@ -22,6 +22,7 @@ class ProgramConfig(BaseModel):
     n_teams: int = Field(..., ge=3, le=500)
     matches_per_team: int = Field(3, ge=1, le=100)
     tournament_type: str = Field("international")
+    matches_per_day: int = Field(3, ge=1, le=100)
 
 
 # ── Teams ─────────────────────────────────────────────────────────────────────

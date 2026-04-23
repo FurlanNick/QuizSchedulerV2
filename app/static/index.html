@@ -68,10 +68,15 @@
         <p>Define the structure of your quiz season.</p>
       </div>
 
+      <div class="mode-toggle">
+        <button id="mode-district" class="mode-btn active" onclick="setSetupMode('district')">District</button>
+        <button id="mode-international" class="mode-btn" onclick="setSetupMode('international')">International</button>
+      </div>
+
       <div class="card-grid">
         <div class="card">
           <h3>Season Structure</h3>
-          <div class="field-row">
+          <div class="field-row" id="row-meets">
             <label class="field-label">Quiz Meets</label>
             <input type="number" id="cfg-meets" class="field-input sm" min="1" max="100" value="4" />
             <span class="field-hint">How many meets this season?</span>
@@ -95,10 +100,16 @@
             <input type="number" id="cfg-mpt" class="field-input sm" min="1" max="100" value="3" />
             <span class="field-hint">Rounds each team competes per meet.</span>
           </div>
-          <div class="field-row">
+          <div class="field-row" id="row-mpd">
+            <label class="field-label">Matches per Day</label>
+            <input type="number" id="cfg-mpd" class="field-input sm" min="1" max="100" value="3" />
+            <span class="field-hint">Max matches per team per day.</span>
+          </div>
+          <div class="field-row" style="display:none">
             <label class="field-label">Tournament Type</label>
             <select id="cfg-type" class="field-input sm">
-              <option value="district" selected>District</option>
+              <option value="district">District</option>
+              <option value="international">International</option>
             </select>
           </div>
         </div>

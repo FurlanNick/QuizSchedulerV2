@@ -55,6 +55,16 @@ function switchTab(name) {
   if (name === 'cross')    renderCrossRefDropdown();
 }
 
+function setSetupMode(mode) {
+  document.getElementById('cfg-type').value = mode;
+  document.getElementById('mode-district').classList.toggle('active', mode === 'district');
+  document.getElementById('mode-international').classList.toggle('active', mode === 'international');
+
+  // Show/Hide fields
+  document.getElementById('row-meets').classList.toggle('hidden', mode === 'international');
+  document.getElementById('row-mpd').classList.toggle('hidden', mode === 'international');
+}
+
 // ── Data Management ────────────────────────────────────────────────────────
 function exportSeason() {
   if (!STATE) return;
@@ -126,7 +136,8 @@ function resetUI() {
   document.getElementById('cfg-rooms').value = 5;
   document.getElementById('cfg-slots').value = 6;
   document.getElementById('cfg-mpt').value   = 3;
-  document.getElementById('cfg-type').value  = 'district';
+  document.getElementById('cfg-mpd').value   = 3;
+  setSetupMode('district');
 
   // Roster
   document.getElementById('roster-textarea').value = '';
@@ -161,7 +172,8 @@ function populateUIFromState() {
     document.getElementById('cfg-rooms').value  = STATE.config.n_rooms;
     document.getElementById('cfg-slots').value  = STATE.config.n_time_slots;
     document.getElementById('cfg-mpt').value    = STATE.config.matches_per_team;
-    document.getElementById('cfg-type').value   = STATE.config.tournament_type;
+    document.getElementById('cfg-mpd').value    = STATE.config.matches_per_day || 3;
+    setSetupMode(STATE.config.tournament_type || 'district');
   }
 
   // Roster
@@ -172,13 +184,16 @@ function populateUIFromState() {
 
 // ── Setup ──────────────────────────────────────────────────────────────────
 async function saveSetup() {
+  const type = document.getElementById('cfg-type').value;
+  const mpt = +document.getElementById('cfg-mpt').value;
   const newConfig = {
-    n_quiz_meets:     +document.getElementById('cfg-meets').value,
+    n_quiz_meets:     type === 'international' ? 1 : +document.getElementById('cfg-meets').value,
     n_rooms:          +document.getElementById('cfg-rooms').value,
     n_time_slots:     +document.getElementById('cfg-slots').value,
     n_teams:          STATE?.all_teams?.length || 10,
-    matches_per_team: +document.getElementById('cfg-mpt').value,
-    tournament_type:  document.getElementById('cfg-type').value,
+    matches_per_team: mpt,
+    tournament_type:  type,
+    matches_per_day:  type === 'international' ? mpt : +document.getElementById('cfg-mpd').value,
   };
 
   // Setup is now always destructive. Warn if there is existing data.
