@@ -16,11 +16,11 @@ class SignInResponse(BaseModel):
 # ── Program Setup ─────────────────────────────────────────────────────────────
 
 class ProgramConfig(BaseModel):
-    n_quiz_meets: int = Field(..., ge=1, le=20)
-    n_rooms: int = Field(..., ge=1, le=20)
-    n_time_slots: int = Field(..., ge=1, le=20)
-    n_teams: int = Field(..., ge=3, le=100)
-    matches_per_team: int = Field(3, ge=1, le=20)
+    n_quiz_meets: int = Field(..., ge=1, le=100)
+    n_rooms: int = Field(..., ge=1, le=100)
+    n_time_slots: int = Field(..., ge=1, le=100)
+    n_teams: int = Field(..., ge=3, le=500)
+    matches_per_team: int = Field(3, ge=1, le=100)
     tournament_type: str = Field("international")
 
 

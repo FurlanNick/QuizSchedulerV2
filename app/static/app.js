@@ -13,7 +13,17 @@ async function api(method, path, body) {
   const res = await fetch(path, opts);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Server error');
+    let msg = 'Server error';
+    if (err.detail) {
+      if (Array.isArray(err.detail)) {
+        msg = err.detail.map(d => d.msg || JSON.stringify(d)).join(', ');
+      } else if (typeof err.detail === 'object') {
+        msg = JSON.stringify(err.detail);
+      } else {
+        msg = err.detail;
+      }
+    }
+    throw new Error(msg);
   }
   return res.json();
 }
