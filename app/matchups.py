@@ -271,8 +271,9 @@ class MatchupSolver:
                     sum_matchups_for_pair = pulp.lpSum(
                         variables[i] for i, M in enumerate(matchups) if team1 in M and team2 in M
                     )
-                    problem += sum_matchups_for_pair >= lower_bound_meetings, \
-                               f"OpponentMinMet_T{team1}_T{team2}_{self.tournament_type}"
+                    if lower_bound_meetings > 0:
+                        problem += sum_matchups_for_pair >= lower_bound_meetings, \
+                                   f"OpponentMinMet_T{team1}_T{team2}_{self.tournament_type}"
                     problem += sum_matchups_for_pair <= upper_bound_meetings, \
                                f"OpponentMaxMet_T{team1}_T{team2}_{self.tournament_type}"
         return problem

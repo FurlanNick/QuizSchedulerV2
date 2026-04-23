@@ -202,6 +202,35 @@
 
 .page-header p { color: var(--ink-2); font-size: .9rem; }
 
+/* ── Mode Toggle ─────────────────────────────────────────────────────────── */
+.mode-toggle {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 4px;
+  border-radius: var(--r);
+  width: fit-content;
+  margin-bottom: 24px;
+}
+
+.mode-btn {
+  padding: 8px 24px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  font-size: .875rem;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 .card {
   background: var(--bg-card);

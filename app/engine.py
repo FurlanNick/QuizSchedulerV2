@@ -236,7 +236,7 @@ def generate_meets(
             tournament_type=effective_tournament_type,
             phase_buffer_slots=cfg.n_time_slots,
             international_buffer_slots=cfg.n_time_slots,
-            matches_per_day=mpt,
+            matches_per_day=cfg.matches_per_day,
         )
         schedule_df, relaxed = sched_solver.schedule_matches(matchup_objs)
 
